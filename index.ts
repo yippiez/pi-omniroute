@@ -19,7 +19,15 @@
  * ```
  */
 import { chatCompletion, chatStream, ProviderHttpError, streamToText } from "./client.ts";
-import { AUTO, AUTO_CHAIN, listModels, listProviders, resolveModel } from "./registry.ts";
+import {
+  AUTO,
+  AUTO_CODING,
+  AUTO_CHAIN,
+  AUTO_CHAINS,
+  listModels,
+  listProviders,
+  resolveModel,
+} from "./registry.ts";
 import type { CallOptions } from "./client.ts";
 import type { ChatChunk, ChatCompletion, ChatParams, ModelDef } from "./types.ts";
 import type { ModelEntry } from "./registry.ts";
@@ -34,7 +42,9 @@ export {
   listProviders,
   resolveModel,
   AUTO,
+  AUTO_CODING,
   AUTO_CHAIN,
+  AUTO_CHAINS,
 };
 export { PROVIDERS } from "./providers/index.ts";
 export { ask, DEFAULT_MODEL } from "./api.ts";

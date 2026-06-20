@@ -61,15 +61,16 @@ const text = await ask("Write a haiku about TypeScript.");
 const text2 = await ask("explain monads", { model: "puter/gpt-4o-mini", system: "Be terse" });
 ```
 
-### CLI
+### CLI (`llm`)
 
 Plain text in, text out (no structured-output flags — see note below):
 
 ```bash
-free-models "write a haiku about TypeScript"   # streams the reply
-echo "diagnose this stack trace" | free-models -s "You are a senior engineer"
-free-models -m puter/gpt-4o-mini --key puter=$PUTER_TOKEN "explain closures"
-free-models --list                              # list available models
+llm "write a haiku about TypeScript"   # streams the reply (auto by default)
+llm -m auto/coding "refactor this function"
+echo "diagnose this stack trace" | llm -s "You are a senior engineer"
+llm -m puter/gpt-4o-mini --key puter=$PUTER_TOKEN "explain closures"
+llm --list                             # list available models
 ```
 
 > **Structured outputs are intentionally not exposed.** These free keyless
@@ -112,19 +113,24 @@ await ask("hello");                            // ask() also defaults to auto
 ```
 
 ```bash
-free-models "hello"          # auto by default
-free-models -m auto "hello"  # explicit
+llm "hello"                 # auto by default
+llm -m auto "hello"         # explicit general routing
+llm -m auto/coding "hello"  # code-tuned routing
 ```
 
-Default chain (edit `AUTO_CHAIN` to re-prioritise):
-`pollinations/openai-fast` → `pollinations/openai` → `uncloseai/Hermes-3` →
-`hackclub/llama-3.3-70b` → `puter/gpt-4o-mini`.
+There are two virtual models (edit `AUTO_CHAINS` in `registry.ts` to re-prioritise):
+
+- **`auto`** — `pollinations/openai-fast` → `pollinations/openai` →
+  `uncloseai/Hermes-3` → `hackclub/llama-3.3-70b` → `puter/gpt-4o-mini`
+- **`auto/coding`** — `pollinations/qwen-coder` →
+  `hackclub/deepseek-coder-33b` → `uncloseai/qwen3.6:27b` →
+  `puter/codestral` → `pollinations/deepseek`
 
 ## Model resolution
 
 `resolveModel(modelStr)` accepts:
 
-- `"auto"` — the virtual model above; expands to `AUTO_CHAIN`, tried in order
+- `"auto"` / `"auto/coding"` — the virtual models above; expand to an `AUTO_CHAINS` list, tried in order
 - `"provider/model"` — explicit (also works for unlisted ids on `passthrough` providers like Puter)
 - `"alias/model"` — provider alias
 - `"model"` — bare id; every provider that lists it is returned, so `chat()` can fail over between them

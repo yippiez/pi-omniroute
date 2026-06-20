@@ -18,8 +18,8 @@ test("every provider is keyless or optional-key and OpenAI-shaped", () => {
 test("listModels yields provider/model entries", () => {
   const models = listModels();
   assert.ok(models.length >= 10);
-  // Concrete models (everything but the virtual "auto") are `provider/model`.
-  const concrete = models.filter((m) => m.id !== "auto");
+  // Concrete models (everything but the virtual "auto" entries) are `provider/model`.
+  const concrete = models.filter((m) => m.provider !== "auto");
   assert.ok(concrete.every((m) => m.id === `${m.provider}/${m.model}`));
   assert.ok(models.some((m) => m.provider === "pollinations"));
 });
@@ -113,10 +113,22 @@ test("auto: resolveModel expands AUTO_CHAIN into ordered targets", () => {
   assert.ok(new Set(targets.map((t) => t.provider.id)).size >= 3);
 });
 
-test("auto: listModels surfaces the virtual auto entry first", () => {
+test("auto: listModels surfaces the virtual auto entries first", () => {
   const models = listModels();
   assert.equal(models[0].id, "auto");
+  assert.equal(models[1].id, "auto/coding");
   assert.equal(models[0].provider, "auto");
+});
+
+test("auto/coding: expands to a code-tuned chain across providers", () => {
+  const targets = resolveModel("auto/coding");
+  assert.ok(targets.length >= 3);
+  // Head of the coding chain is pollinations/qwen-coder.
+  assert.equal(targets[0].provider.id, "pollinations");
+  assert.equal(targets[0].model, "qwen-coder");
+  // Distinct from the general chain.
+  const general = resolveModel("auto");
+  assert.notEqual(targets[0].model, general[0].model);
 });
 
 test("auto: chat falls over down the chain until one provider responds", async () => {
@@ -165,11 +177,13 @@ test("ask() returns the reply as a plain string", async () => {
   assert.equal(text, "a haiku");
 });
 
-test("CLI --list prints provider/model entries (no network)", () => {
-  const cli = fileURLToPath(new URL("../cli.ts", import.meta.url));
+test("llm CLI --list prints provider/model entries (no network)", () => {
+  const cli = fileURLToPath(new URL("../llm.ts", import.meta.url));
   const out = execFileSync("node", ["--import", "tsx/esm", cli, "--list"], {
     encoding: "utf8",
   });
+  assert.match(out, /^auto\b/m);
+  assert.match(out, /^auto\/coding\b/m);
   assert.match(out, /pollinations\/openai/);
   assert.match(out, /puter\//);
 });

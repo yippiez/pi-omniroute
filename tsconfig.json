@@ -15,6 +15,6 @@
     "rewriteRelativeImportExtensions": true,
     "verbatimModuleSyntax": true
   },
-  "include": ["index.ts", "api.ts", "cli.ts", "client.ts", "registry.ts", "types.ts", "providers/**/*.ts"],
+  "include": ["index.ts", "api.ts", "llm.ts", "client.ts", "registry.ts", "types.ts", "providers/**/*.ts"],
   "exclude": ["node_modules", "dist", "test"]
 }

@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 /**
- * free-models CLI — simple text in, text out.
+ * llm CLI — simple text in, text out.
  *
- *   free-models "your prompt"
- *   echo "your prompt" | free-models
- *   free-models -m puter/gpt-4o-mini "explain closures"
- *   free-models --list
+ *   llm "your prompt"
+ *   echo "your prompt" | llm
+ *   llm -m puter/gpt-4o-mini "explain closures"
+ *   llm --list
  *
  * No flags for structured output by design: these free keyless providers only
  * partially support it, so the CLI stays plain text.
@@ -15,14 +15,15 @@ import { listModels } from "./registry.ts";
 import { DEFAULT_MODEL } from "./api.ts";
 import type { ChatMessage } from "./types.ts";
 
-const HELP = `free-models — chat with free, keyless AI models (text in, text out)
+const HELP = `llm — chat with free, keyless AI models (text in, text out)
 
 Usage:
-  free-models [options] [prompt...]
-  echo "prompt" | free-models [options]
+  llm [options] [prompt...]
+  echo "prompt" | llm [options]
 
 Options:
-  -m, --model <id>     model id (default: ${DEFAULT_MODEL}); "provider/model" or bare
+  -m, --model <id>     model id (default: ${DEFAULT_MODEL}); "auto", "auto/coding",
+                       "provider/model", or a bare id
   -s, --system <text>  optional system prompt
       --key <p=token>  optional bearer token for provider p (repeatable)
       --no-stream      print the full reply at once instead of streaming
@@ -30,9 +31,10 @@ Options:
   -h, --help           show this help
 
 Examples:
-  free-models "write a haiku about TypeScript"
-  free-models -m puter/gpt-4o-mini --key puter=$PUTER_TOKEN "explain monads"
-  cat bug.txt | free-models -s "You are a senior engineer" "diagnose this"`;
+  llm "write a haiku about TypeScript"
+  llm -m auto/coding "refactor this function"
+  llm -m puter/gpt-4o-mini --key puter=$PUTER_TOKEN "explain monads"
+  cat bug.txt | llm -s "You are a senior engineer" "diagnose this"`;
 
 interface Parsed {
   model: string;

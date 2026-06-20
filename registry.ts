@@ -35,28 +35,43 @@ export function getProvider(idOrAlias: string): ProviderDef | undefined {
 }
 
 /** Every known free model as `provider/model` entries. */
-/** The virtual model id that auto-routes across providers. */
+/** The virtual model ids that auto-route across providers. */
 export const AUTO = "auto";
+export const AUTO_CODING = "auto/coding";
 
 /**
- * Ordered preference chain for the `auto` model. `chat({ model: "auto" })` tries
- * each target in order and returns the first that responds — fast general
- * keyless models first, larger/optional-token ones as fallbacks. Edit this list
- * to change auto-routing priority.
+ * Ordered preference chains for the virtual `auto` models. `chat({ model })`
+ * tries each target in order and returns the first that responds.
+ *  - "auto":        fast general keyless models first, optional-token last.
+ *  - "auto/coding": code-tuned models first (Qwen-Coder, DeepSeek-Coder, Codestral).
+ * Edit these lists to change auto-routing priority.
  */
-export const AUTO_CHAIN: string[] = [
-  "pollinations/openai-fast",
-  "pollinations/openai",
-  "uncloseai/adamo1139/Hermes-3-Llama-3.1-8B-FP8-Dynamic",
-  "hackclub/meta-llama/llama-3.3-70b-instruct",
-  "puter/gpt-4o-mini",
-];
+export const AUTO_CHAINS: Record<string, string[]> = {
+  [AUTO]: [
+    "pollinations/openai-fast",
+    "pollinations/openai",
+    "uncloseai/adamo1139/Hermes-3-Llama-3.1-8B-FP8-Dynamic",
+    "hackclub/meta-llama/llama-3.3-70b-instruct",
+    "puter/gpt-4o-mini",
+  ],
+  [AUTO_CODING]: [
+    "pollinations/qwen-coder",
+    "hackclub/deepseek-ai/deepseek-coder-33b",
+    "uncloseai/qwen3.6:27b",
+    "puter/codestral-2508",
+    "pollinations/deepseek",
+  ],
+};
 
-/** Expand the `auto` chain into concrete provider+model targets, in order. */
-export function autoTargets(): ResolvedModel[] {
+/** Back-compat alias for the general chain. */
+export const AUTO_CHAIN = AUTO_CHAINS[AUTO];
+
+/** Expand an `auto` chain into concrete provider+model targets, in order. */
+export function autoTargets(variant: string = AUTO): ResolvedModel[] {
+  const chain = AUTO_CHAINS[variant] ?? [];
   const out: ResolvedModel[] = [];
   const seen = new Set<string>();
-  for (const id of AUTO_CHAIN) {
+  for (const id of chain) {
     for (const t of resolveModel(id)) {
       const key = `${t.provider.id}/${t.model}`;
       if (!seen.has(key)) {
@@ -71,6 +86,7 @@ export function autoTargets(): ResolvedModel[] {
 export function listModels(): ModelEntry[] {
   const out: ModelEntry[] = [
     { id: AUTO, model: AUTO, name: "Auto — best available free model (with fallback)", provider: AUTO },
+    { id: AUTO_CODING, model: AUTO_CODING, name: "Auto (coding) — best available code model (with fallback)", provider: AUTO },
   ];
   for (const p of PROVIDERS) {
     for (const m of p.models) {
@@ -87,17 +103,17 @@ export interface ResolvedModel {
 
 /**
  * Resolve a model string to a provider + bare model id. Accepts:
- *   - "auto"            (virtual; expands to the AUTO_CHAIN, tried in order)
- *   - "provider/model"  (explicit; also works for passthrough/unlisted models)
- *   - "alias/model"     (provider alias)
- *   - "model"           (bare; first provider that lists it wins)
+ *   - "auto" / "auto/coding"  (virtual; expand to an AUTO_CHAINS list, in order)
+ *   - "provider/model"        (explicit; also works for passthrough/unlisted models)
+ *   - "alias/model"           (provider alias)
+ *   - "model"                 (bare; first provider that lists it wins)
  *
  * Returns every match so callers can fail over across providers that serve the
  * same model id.
  */
 export function resolveModel(modelStr: string): ResolvedModel[] {
   if (!modelStr) return [];
-  if (modelStr === AUTO) return autoTargets();
+  if (modelStr in AUTO_CHAINS) return autoTargets(modelStr);
 
   const slash = modelStr.indexOf("/");
   if (slash !== -1) {

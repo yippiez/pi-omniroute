@@ -16,13 +16,13 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
-    "free-models": "./dist/cli.js"
+    "llm": "./dist/llm.js"
   },
   "files": [
     "dist",
     "index.ts",
     "api.ts",
-    "cli.ts",
+    "llm.ts",
     "client.ts",
     "registry.ts",
     "types.ts",
@@ -31,7 +31,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "cli": "node --import tsx/esm cli.ts",
+    "llm": "node --import tsx/esm llm.ts",
     "test": "node --import tsx/esm --test test/*.test.ts"
   },
   "engines": {
