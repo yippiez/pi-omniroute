@@ -25,12 +25,14 @@ import { FreeModels } from "free-models";
 
 const ai = new FreeModels();
 
-// Non-streaming
+// Non-streaming. Omit `model` (or pass "auto") to auto-route across providers.
 const res = await ai.chat({
-  model: "openai", // bare id, or "pollinations/openai", or "alias/model"
   messages: [{ role: "user", content: "Write a haiku about TypeScript." }],
 });
 console.log(res.choices[0].message.content);
+
+// ...or pin a specific model: bare id, "pollinations/openai", or "alias/model".
+await ai.chat({ model: "puter/gpt-4o-mini", messages: [/* … */] });
 
 // Streaming
 for await (const chunk of ai.stream({
@@ -98,15 +100,37 @@ const ai = new FreeModels({ keys: { puter: process.env.PUTER_TOKEN } });
 Add a provider by dropping a `providers/<id>.ts` that exports a `ProviderDef`
 and listing it in `providers/index.ts`.
 
+## `auto` model
+
+`auto` is the default. It expands to an ordered chain of providers
+(`AUTO_CHAIN` in `registry.ts`) and tries each until one responds — so a single
+rate-limited or down provider transparently falls through to the next:
+
+```ts
+await ai.chat({ model: "auto", messages });   // or just omit `model`
+await ask("hello");                            // ask() also defaults to auto
+```
+
+```bash
+free-models "hello"          # auto by default
+free-models -m auto "hello"  # explicit
+```
+
+Default chain (edit `AUTO_CHAIN` to re-prioritise):
+`pollinations/openai-fast` → `pollinations/openai` → `uncloseai/Hermes-3` →
+`hackclub/llama-3.3-70b` → `puter/gpt-4o-mini`.
+
 ## Model resolution
 
 `resolveModel(modelStr)` accepts:
 
+- `"auto"` — the virtual model above; expands to `AUTO_CHAIN`, tried in order
 - `"provider/model"` — explicit (also works for unlisted ids on `passthrough` providers like Puter)
 - `"alias/model"` — provider alias
 - `"model"` — bare id; every provider that lists it is returned, so `chat()` can fail over between them
 
-There is **no smart routing** beyond this lookup, by design.
+Beyond `auto` and this lookup there is **no smart routing** (no weighting,
+circuit-breakers or cooldowns), by design.
 
 ## Develop
 

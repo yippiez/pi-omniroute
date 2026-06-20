@@ -35,8 +35,43 @@ export function getProvider(idOrAlias: string): ProviderDef | undefined {
 }
 
 /** Every known free model as `provider/model` entries. */
+/** The virtual model id that auto-routes across providers. */
+export const AUTO = "auto";
+
+/**
+ * Ordered preference chain for the `auto` model. `chat({ model: "auto" })` tries
+ * each target in order and returns the first that responds — fast general
+ * keyless models first, larger/optional-token ones as fallbacks. Edit this list
+ * to change auto-routing priority.
+ */
+export const AUTO_CHAIN: string[] = [
+  "pollinations/openai-fast",
+  "pollinations/openai",
+  "uncloseai/adamo1139/Hermes-3-Llama-3.1-8B-FP8-Dynamic",
+  "hackclub/meta-llama/llama-3.3-70b-instruct",
+  "puter/gpt-4o-mini",
+];
+
+/** Expand the `auto` chain into concrete provider+model targets, in order. */
+export function autoTargets(): ResolvedModel[] {
+  const out: ResolvedModel[] = [];
+  const seen = new Set<string>();
+  for (const id of AUTO_CHAIN) {
+    for (const t of resolveModel(id)) {
+      const key = `${t.provider.id}/${t.model}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        out.push(t);
+      }
+    }
+  }
+  return out;
+}
+
 export function listModels(): ModelEntry[] {
-  const out: ModelEntry[] = [];
+  const out: ModelEntry[] = [
+    { id: AUTO, model: AUTO, name: "Auto — best available free model (with fallback)", provider: AUTO },
+  ];
   for (const p of PROVIDERS) {
     for (const m of p.models) {
       out.push({ id: `${p.id}/${m.id}`, model: m.id, name: m.name, provider: p.id });
@@ -52,6 +87,7 @@ export interface ResolvedModel {
 
 /**
  * Resolve a model string to a provider + bare model id. Accepts:
+ *   - "auto"            (virtual; expands to the AUTO_CHAIN, tried in order)
  *   - "provider/model"  (explicit; also works for passthrough/unlisted models)
  *   - "alias/model"     (provider alias)
  *   - "model"           (bare; first provider that lists it wins)
@@ -61,6 +97,7 @@ export interface ResolvedModel {
  */
 export function resolveModel(modelStr: string): ResolvedModel[] {
   if (!modelStr) return [];
+  if (modelStr === AUTO) return autoTargets();
 
   const slash = modelStr.indexOf("/");
   if (slash !== -1) {

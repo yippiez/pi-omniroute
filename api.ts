@@ -28,8 +28,8 @@ export interface AskOptions {
   fetchImpl?: typeof fetch;
 }
 
-/** The default free model — Pollinations' keyless OpenAI gateway. */
-export const DEFAULT_MODEL = "openai";
+/** The default model — "auto" picks the best available free model with fallback. */
+export const DEFAULT_MODEL = "auto";
 
 /** Send a prompt, get the assistant's reply as a plain string. */
 export async function ask(prompt: string, opts: AskOptions = {}): Promise<string> {

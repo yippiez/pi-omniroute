@@ -18,7 +18,9 @@ test("every provider is keyless or optional-key and OpenAI-shaped", () => {
 test("listModels yields provider/model entries", () => {
   const models = listModels();
   assert.ok(models.length >= 10);
-  assert.ok(models.every((m) => m.id === `${m.provider}/${m.model}`));
+  // Concrete models (everything but the virtual "auto") are `provider/model`.
+  const concrete = models.filter((m) => m.id !== "auto");
+  assert.ok(concrete.every((m) => m.id === `${m.provider}/${m.model}`));
   assert.ok(models.some((m) => m.provider === "pollinations"));
 });
 
@@ -99,6 +101,56 @@ test("chat() fails over to the next provider that serves the same model", async 
   } finally {
     PROVIDERS.splice(-2, 2);
   }
+});
+
+test("auto: resolveModel expands AUTO_CHAIN into ordered targets", () => {
+  const targets = resolveModel("auto");
+  assert.ok(targets.length >= 4, "auto expands to several providers");
+  // First target should be the head of the chain (pollinations/openai-fast).
+  assert.equal(targets[0].provider.id, "pollinations");
+  assert.equal(targets[0].model, "openai-fast");
+  // Spans multiple providers.
+  assert.ok(new Set(targets.map((t) => t.provider.id)).size >= 3);
+});
+
+test("auto: listModels surfaces the virtual auto entry first", () => {
+  const models = listModels();
+  assert.equal(models[0].id, "auto");
+  assert.equal(models[0].provider, "auto");
+});
+
+test("auto: chat falls over down the chain until one provider responds", async () => {
+  let n = 0;
+  const fakeFetch: typeof fetch = async () => {
+    n += 1;
+    if (n < 3) return new Response("down", { status: 503 }); // first two fail
+    return new Response(
+      JSON.stringify({
+        choices: [{ index: 0, message: { role: "assistant", content: "third" }, finish_reason: "stop" }],
+      }),
+      { status: 200, headers: { "content-type": "application/json" } }
+    );
+  };
+  const ai = new FreeModels({ fetchImpl: fakeFetch });
+  const res = await ai.chat({ model: "auto", messages: [{ role: "user", content: "x" }] });
+  assert.equal(res.choices[0].message.content, "third");
+  assert.equal(n, 3);
+});
+
+test("auto is the default when model is omitted", async () => {
+  const urls: string[] = [];
+  const fakeFetch: typeof fetch = async (url) => {
+    urls.push(String(url));
+    return new Response(
+      JSON.stringify({ choices: [{ index: 0, message: { role: "assistant", content: "ok" }, finish_reason: "stop" }] }),
+      { status: 200, headers: { "content-type": "application/json" } }
+    );
+  };
+  const ai = new FreeModels({ fetchImpl: fakeFetch });
+  const res = await ai.chat({ messages: [{ role: "user", content: "x" }] });
+  assert.equal(res.choices[0].message.content, "ok");
+  // Defaulted to auto -> first chain entry is pollinations.
+  assert.equal(urls[0], "https://gen.pollinations.ai/v1/chat/completions");
 });
 
 test("ask() returns the reply as a plain string", async () => {

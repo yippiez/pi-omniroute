@@ -19,7 +19,7 @@
  * ```
  */
 import { chatCompletion, chatStream, ProviderHttpError, streamToText } from "./client.ts";
-import { listModels, listProviders, resolveModel } from "./registry.ts";
+import { AUTO, AUTO_CHAIN, listModels, listProviders, resolveModel } from "./registry.ts";
 import type { CallOptions } from "./client.ts";
 import type { ChatChunk, ChatCompletion, ChatParams, ModelDef } from "./types.ts";
 import type { ModelEntry } from "./registry.ts";
@@ -33,6 +33,8 @@ export {
   listModels,
   listProviders,
   resolveModel,
+  AUTO,
+  AUTO_CHAIN,
 };
 export { PROVIDERS } from "./providers/index.ts";
 export { ask, DEFAULT_MODEL } from "./api.ts";
@@ -50,11 +52,14 @@ export interface FreeModelsOptions {
 }
 
 export interface ChatRequest extends ChatParams {
-  /** Model id: `provider/model`, `alias/model`, or a bare model id. */
-  model: string;
   /**
-   * When more than one provider serves the model, try each in order until one
-   * succeeds. Default true.
+   * Model id: `auto` (default), `provider/model`, `alias/model`, or a bare id.
+   * `auto` tries the AUTO_CHAIN across providers until one responds.
+   */
+  model?: string;
+  /**
+   * When the model resolves to more than one provider (including `auto`), try
+   * each in order until one succeeds. Default true.
    */
   fallback?: boolean;
 }
@@ -93,7 +98,7 @@ export class FreeModels {
 
   /** Non-streaming chat completion, with optional cross-provider fail-over. */
   async chat(req: ChatRequest): Promise<ChatCompletion> {
-    const { model, fallback = true, ...params } = req;
+    const { model = AUTO, fallback = true, ...params } = req;
     const targets = resolveModel(model);
     if (targets.length === 0) throw new NoProviderError(model);
 
@@ -113,7 +118,7 @@ export class FreeModels {
    * the first chunk is yielded we are committed to that provider.
    */
   async *stream(req: ChatRequest): AsyncGenerator<ChatChunk> {
-    const { model, fallback = true, ...params } = req;
+    const { model = AUTO, fallback = true, ...params } = req;
     const targets = resolveModel(model);
     if (targets.length === 0) throw new NoProviderError(model);
 
