@@ -7,13 +7,22 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./api": {
+      "types": "./dist/api.d.ts",
+      "import": "./dist/api.js"
     }
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "bin": {
+    "free-models": "./dist/cli.js"
+  },
   "files": [
     "dist",
     "index.ts",
+    "api.ts",
+    "cli.ts",
     "client.ts",
     "registry.ts",
     "types.ts",
@@ -22,12 +31,14 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
+    "cli": "node --import tsx/esm cli.ts",
     "test": "node --import tsx/esm --test test/*.test.ts"
   },
   "engines": {
     "node": ">=18"
   },
   "devDependencies": {
+    "@types/node": "^26.0.0",
     "tsx": "^4.19.2",
     "typescript": "^5.6.0"
   },

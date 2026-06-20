@@ -48,6 +48,35 @@ console.log(ai.listModels());   // [{ id: "pollinations/openai", provider, model
 console.log(ai.listModelIds());
 ```
 
+### One-liner API
+
+For callers that just want a string, `free-models/api` exposes a single function:
+
+```ts
+import { ask } from "free-models/api";
+
+const text = await ask("Write a haiku about TypeScript.");
+const text2 = await ask("explain monads", { model: "puter/gpt-4o-mini", system: "Be terse" });
+```
+
+### CLI
+
+Plain text in, text out (no structured-output flags — see note below):
+
+```bash
+free-models "write a haiku about TypeScript"   # streams the reply
+echo "diagnose this stack trace" | free-models -s "You are a senior engineer"
+free-models -m puter/gpt-4o-mini --key puter=$PUTER_TOKEN "explain closures"
+free-models --list                              # list available models
+```
+
+> **Structured outputs are intentionally not exposed.** These free keyless
+> providers only *partially* support `response_format` / JSON-schema (works on
+> Pollinations' `openai*` models, UncloseAI/vLLM and Puter's OpenAI models;
+> unreliable elsewhere), so the CLI stays plain text. If you need it, pass
+> `response_format` yourself via the library's `chat()` — it's forwarded as-is
+> to providers that support it.
+
 ### Optional keys
 
 Some providers work keyless but accept an optional bearer token for higher

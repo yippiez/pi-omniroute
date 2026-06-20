@@ -35,6 +35,8 @@ export {
   resolveModel,
 };
 export { PROVIDERS } from "./providers/index.ts";
+export { ask, DEFAULT_MODEL } from "./api.ts";
+export type { AskOptions } from "./api.ts";
 export type { CallOptions } from "./client.ts";
 export type { ModelEntry, ResolvedModel } from "./registry.ts";
 

@@ -1,7 +1,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 
 import { FreeModels, listModels, resolveModel } from "../index.ts";
+import { ask } from "../api.ts";
 import { PROVIDERS } from "../providers/index.ts";
 
 test("every provider is keyless or optional-key and OpenAI-shaped", () => {
@@ -96,6 +99,27 @@ test("chat() fails over to the next provider that serves the same model", async 
   } finally {
     PROVIDERS.splice(-2, 2);
   }
+});
+
+test("ask() returns the reply as a plain string", async () => {
+  const fakeFetch: typeof fetch = async () =>
+    new Response(
+      JSON.stringify({
+        choices: [{ index: 0, message: { role: "assistant", content: "a haiku" }, finish_reason: "stop" }],
+      }),
+      { status: 200, headers: { "content-type": "application/json" } }
+    );
+  const text = await ask("write a haiku", { fetchImpl: fakeFetch });
+  assert.equal(text, "a haiku");
+});
+
+test("CLI --list prints provider/model entries (no network)", () => {
+  const cli = fileURLToPath(new URL("../cli.ts", import.meta.url));
+  const out = execFileSync("node", ["--import", "tsx/esm", cli, "--list"], {
+    encoding: "utf8",
+  });
+  assert.match(out, /pollinations\/openai/);
+  assert.match(out, /puter\//);
 });
 
 test("puter bearer token is sent when configured", async () => {
